@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>omnibot_navigation</name>
+  <version>0.0.1</version>
+  <description>
+    The omnibot_navigation package provides ROS 2 launch scripts and configuration
+    files for starting the navigation stack on the OmniBot platform.
+  </description>
+
+  <maintainer email="dev@siegler.one">Stefan Siegler</maintainer>
+  <license>Proprietary</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <!-- Runtime dependencies -->
+  <exec_depend>nav2_bringup</exec_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>
