@@ -1,0 +1,91 @@
+# =============================================================================
+# OmniBot SLAM Toolbox Configuration
+# =============================================================================
+
+slam_toolbox:
+  ros__parameters:
+    # -------------------------------------------------------------------------
+    # Solver Plugin Configuration
+    # -------------------------------------------------------------------------
+    solver_plugin: solver_plugins::CeresSolver                                    # Use Ceres for graph optimization.
+    ceres_linear_solver: SPARSE_NORMAL_CHOLESKY                                   # Sparse solver balances speed/memory.
+    ceres_preconditioner: SCHUR_JACOBI                                            # Default preconditioner for stability.
+    ceres_trust_strategy: LEVENBERG_MARQUARDT                                     # Robust trust-region strategy.
+    ceres_dogleg_type: TRADITIONAL_DOGLEG                                         # Dogleg fallback for tough problems.
+    ceres_loss_function: None                                                     # No robust loss to keep residuals raw.
+
+    # -------------------------------------------------------------------------
+    # Core Frames and ROS Interfaces
+    # -------------------------------------------------------------------------
+    odom_frame: odom                                                              # Matches omnibot_hardware odom publisher.
+    map_frame: map                                                                # SLAM publishes the global frame.
+    base_frame: base_link                                                         # Robot base used by Nav2 and TF.
+    scan_topic: /scan                                                             # LD LiDAR driver topic.
+    use_map_saver: true                                                           # Keep map_saver services enabled.
+    mode: mapping                                                                 # Default to mapping (toggle to localization manually).
+
+    # -------------------------------------------------------------------------
+    # Optional Map Bootstrapping (commented to preserve behavior)
+    # -------------------------------------------------------------------------
+    # map_file_name: test_steve                                                   # Resume mapping from serialized file.
+    # map_start_pose: [0.0, 0.0, 0.0]                                             # Initial pose override if needed.
+    # map_start_at_dock: true                                                     # Start from dock pose when available.
+
+    # -------------------------------------------------------------------------
+    # General Behavior and Timing
+    # -------------------------------------------------------------------------
+    debug_logging: false                                                          # Disable verbose solver logs.
+    throttle_scans: 1                                                             # Use every scan (no throttling).
+    transform_publish_period: 0.02                                                # Publish base pose at 50 Hz (0 to disable).
+    map_update_interval: 5.0                                                      # Seconds between serialized map updates.
+    resolution: 0.05                                                              # Occupancy grid resolution (m/cell).
+    min_laser_range: 0.0                                                          # Raster everything above 0 m.
+    max_laser_range: 20.0                                                         # Clamp raster distance to reduce noise.
+    minimum_time_interval: 0.5                                                    # Minimum seconds between processed scans.
+    transform_timeout: 0.2                                                        # TF lookup timeout (s).
+    tf_buffer_duration: 30.0                                                      # Buffer length for TF cache (s).
+    stack_size_to_use: 40000000                                                   # Large stack for serializing big maps.
+    enable_interactive_mode: true                                                 # Allow RViz interactive markers.
+
+    # -------------------------------------------------------------------------
+    # Scan Matching and Loop Closure
+    # -------------------------------------------------------------------------
+    use_scan_matching: true                                                       # Always refine pose with scan matching.
+    use_scan_barycenter: true                                                     # Center scans on barycenter for stability.
+    minimum_travel_distance: 0.5                                                  # Meters before accepting a new key scan.
+    minimum_travel_heading: 0.5                                                   # Radians before accepting a new key scan.
+    scan_buffer_size: 10                                                          # Number of scans kept for matching.
+    scan_buffer_maximum_scan_distance: 10.0                                       # Drop scans beyond this distance (m).
+    link_match_minimum_response_fine: 0.1                                         # Response threshold for fine matching.
+    link_scan_maximum_distance: 1.5                                               # Maximum distance between linked scans (m).
+    loop_search_maximum_distance: 3.0                                             # Maximum search radius for loop closure (m).
+    do_loop_closing: true                                                         # Enable loop closure corrections.
+    loop_match_minimum_chain_size: 10                                             # Minimum scans in a loop chain.
+    loop_match_maximum_variance_coarse: 3.0                                       # Reject coarse matches with high variance.
+    loop_match_minimum_response_coarse: 0.35                                      # Coarse loop match response floor.
+    loop_match_minimum_response_fine: 0.45                                        # Fine loop match response floor.
+
+    # -------------------------------------------------------------------------
+    # Correlation Search Windows
+    # -------------------------------------------------------------------------
+    correlation_search_space_dimension: 0.5                                       # Size (m) of correlation search window.
+    correlation_search_space_resolution: 0.01                                     # Grid resolution for correlation (m).
+    correlation_search_space_smear_deviation: 0.1                                 # Gaussian smear to smooth responses.
+
+    loop_search_space_dimension: 8.0                                              # Loop closure search size (m).
+    loop_search_space_resolution: 0.05                                            # Resolution for loop closure search grid (m).
+    loop_search_space_smear_deviation: 0.03                                       # Smear deviation for loop closure (m).
+
+    # -------------------------------------------------------------------------
+    # Scan Matcher Penalties and Thresholds
+    # -------------------------------------------------------------------------
+    distance_variance_penalty: 0.5                                                # Penalize large translation jumps.
+    angle_variance_penalty: 1.0                                                   # Penalize large rotational jumps.
+    fine_search_angle_offset: 0.00349                                             # Fine search window in radians.
+    coarse_search_angle_offset: 0.349                                             # Coarse search window in radians.
+    coarse_angle_resolution: 0.0349                                               # Step size for coarse angle search (rad).
+    minimum_angle_penalty: 0.9                                                    # Minimum multiplier on angular penalty.
+    minimum_distance_penalty: 0.5                                                 # Minimum multiplier on distance penalty.
+    use_response_expansion: true                                                  # Expand around best response for accuracy.
+    min_pass_through: 2                                                           # Minimum hits required before occupancy updates.
+    occupancy_threshold: 0.1                                                      # Occupancy threshold when rendering map.
