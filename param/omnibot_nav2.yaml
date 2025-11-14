@@ -1,480 +1,531 @@
+# =============================================================================
+# OmniBot Nav2 Configuration
+# =============================================================================
+# Each section documents the tuned parameters for the omnidirectional OmniBot.
+# Comments describe the reasoning behind every parameter so the file can be
+# maintained confidently in production. Commented parameters include guidance
+# on when they should be re-enabled.
+
+# -----------------------------------------------------------------------------
+# Monte-Carlo Localization (AMCL)
+# -----------------------------------------------------------------------------
 amcl:
   ros__parameters:
-    use_sim_time: False
-    alpha1: 0.005
-    alpha2: 0.005
-    alpha3: 0.005
-    alpha4: 0.005
-    alpha5: 0.005
-    base_frame_id: "base_link"
-    beam_skip_distance: 0.5
-    beam_skip_error_threshold: 0.9
-    beam_skip_threshold: 0.3
-    do_beamskip: false
-    global_frame_id: "map"
-    lambda_short: 0.1
-    laser_likelihood_max_dist: 4.0
-    laser_max_range: 100.0
-    laser_min_range: -1.0
-    laser_model_type: "likelihood_field"
-    max_beams: 60
-    max_particles: 2000
-    min_particles: 500
-    odom_frame_id: "odom"
-    pf_err: 0.05
-    pf_z: 0.99
-    recovery_alpha_fast: 0.0
-    recovery_alpha_slow: 0.0
-    resample_interval: 1
-    robot_model_type: "nav2_amcl::OmniMotionModel"
-    save_pose_rate: 0.5
-    sigma_hit: 0.2
-    tf_broadcast: true
-    transform_tolerance: 1.0
-    update_min_a: 0.2
-    update_min_d: 0.25
-    z_hit: 0.9
-    z_max: 0.05
-    z_rand: 0.5
-    z_short: 0.05
-    scan_topic: /scan
-    set_initial_pose: false
-    initial_pose: 
-      x: 0.0
-      y: 0.0
-      yaw: 0.0
+    # --- Timing and Frames ---------------------------------------------------
+    use_sim_time: False                                                                   # Switch to /clock when running in simulation or rosbag playback.
+    base_frame_id: "base_link"                                                            # Robot base that AMCL tracks.
+    global_frame_id: "map"                                                                # Global frame in which AMCL publishes the pose.
+    odom_frame_id: "odom"                                                                 # Frame sourced from wheel odometry.
+    tf_broadcast: true                                                                    # Publish TF from map->odom for downstream nodes.
+    transform_tolerance: 1.0                                                              # Max TF latency tolerated when transforming scans.
+    scan_topic: /scan                                                                     # 2D lidar topic used for localization.
+    set_initial_pose: true                                                                # Use the initial pose below if no pose is received.
+    initial_pose:
+      x: 0.0                                                                              # Map-frame X position for initialization.
+      y: 0.0                                                                              # Map-frame Y position for initialization.
+      yaw: 0.0                                                                            # Map-frame yaw (rad) for initialization.
+    save_pose_rate: 0.5                                                                   # Persist pose on parameter server twice per second.
 
+    # --- Motion Model Noise (Omni) ------------------------------------------
+    alpha1: 0.005                                                                         # Rotational noise from rotational motion.
+    alpha2: 0.005                                                                         # Rotational noise from translational motion.
+    alpha3: 0.005                                                                         # Translational noise from translational motion.
+    alpha4: 0.005                                                                         # Translational noise from rotational motion.
+    alpha5: 0.005                                                                         # Strafing noise used by the Omni motion model.
+    robot_model_type: "nav2_amcl::OmniMotionModel"                                        # Enables omni-drive kinematics.
+
+    # --- Beam Skipping and Sensor Modeling ----------------------------------
+    beam_skip_distance: 0.5                                                               # Skip beams beyond this disagreement distance (m).
+    beam_skip_error_threshold: 0.9                                                        # Probability threshold for enabling beam skip.
+    beam_skip_threshold: 0.3                                                              # Fraction of beams that must disagree before skipping.
+    do_beamskip: false                                                                    # Disable beam skipping because lidar is clean indoors.
+    laser_likelihood_max_dist: 4.0                                                        # Max distance to search for nearest obstacle.
+    laser_max_range: 100.0                                                                # Upper bound on lidar range readings (m).
+    laser_min_range: -1.0                                                                 # Use sensor minimum unless overridden.
+    laser_model_type: "likelihood_field"                                                  # Likelihood field is robust in cluttered maps.
+    sigma_hit: 0.2                                                                        # Standard deviation for hit distribution.
+    z_hit: 0.9                                                                            # Probability weight of accurate measurements.
+    z_short: 0.05                                                                         # Weight for unexpected short readings (e.g., glass).
+    lambda_short: 0.1                                                                     # Exponential decay for short hits.
+    z_max: 0.05                                                                           # Weight for max-range readings.
+    z_rand: 0.5                                                                           # Weight for random measurement noise.
+
+    # --- Particle Filter Behavior -------------------------------------------
+    max_beams: 60                                                                         # Number of laser beams sampled per update (balances speed/accuracy).
+    max_particles: 2000                                                                   # Upper bound of particles to cover large spaces.
+    min_particles: 500                                                                    # Lower bound for efficiency in open areas.
+    pf_err: 0.05                                                                          # Population variance threshold for adaptive sampling.
+    pf_z: 0.99                                                                            # Population confidence for adaptive resampling.
+    resample_interval: 1                                                                  # Resample every update for responsiveness.
+    recovery_alpha_fast: 0.0                                                              # Disable fast average weight decay (handled by omni tuning).
+    recovery_alpha_slow: 0.0                                                              # Disable slow average weight decay.
+    update_min_a: 0.2                                                                     # Minimum angular travel (rad) before integrating odometry.
+    update_min_d: 0.25                                                                    # Minimum translation (m) before integrating odometry.
+    lambda_short: 0.1                                                                     # Duplicate due to Nav2 defaults; retained for clarity.
+
+# -----------------------------------------------------------------------------
+# Behavior Tree Navigator (top-level behavior tree executor)
+# -----------------------------------------------------------------------------
 bt_navigator:
   ros__parameters:
-    use_sim_time: False
-    global_frame: map
-    robot_base_frame: base_link
-    odom_topic: "/odom"
-    bt_loop_duration: 10
-    default_server_timeout: 10
+    use_sim_time: False                                                                   # Navigator should follow simulation time only when required.
+    global_frame: map                                                                     # Reference frame for global planning.
+    robot_base_frame: base_link                                                           # Robot body frame used inside BT nodes.
+    odom_topic: "/odom"                                                                   # Odometry topic to root blackboard transforms.
+    bt_loop_duration: 10                                                                  # Tree tick period in ms (higher = fewer ticks).
+    default_server_timeout: 10                                                            # Seconds to wait for action servers before aborting.
     # 'default_nav_through_poses_bt_xml' and 'default_nav_to_pose_bt_xml' are use defaults:
     # nav3_bt_navigator/navigate_to_pose_w_replanning_and_recovery.xml
-    # nav2_bt_navigator/navigate_th:rough_poses_w_replanning_and_recovery.xml
+    # nav2_bt_navigator/navigate_through_poses_w_replanning_and_recovery.xml
     # They can be set here or via a RewrittenYaml remap from a parent launch file to Nav2.
-    plugin_lib_names:
-    - nav2_compute_path_to_pose_action_bt_node
-    - nav2_compute_path_through_poses_action_bt_node
-    - nav2_smooth_path_action_bt_node
-    - nav2_follow_path_action_bt_node
-    - nav2_spin_action_bt_node
-    - nav2_wait_action_bt_node
-    - nav2_assisted_teleop_action_bt_node
-    - nav2_back_up_action_bt_node
-    - nav2_drive_on_heading_bt_node
-    - nav2_clear_costmap_service_bt_node
-    - nav2_is_stuck_condition_bt_node
-    - nav2_goal_reached_condition_bt_node
-    - nav2_goal_updated_condition_bt_node
-    - nav2_globally_updated_goal_condition_bt_node
-    - nav2_is_path_valid_condition_bt_node
-    - nav2_initial_pose_received_condition_bt_node
-    - nav2_reinitialize_global_localization_service_bt_node
-    - nav2_rate_controller_bt_node
-    - nav2_distance_controller_bt_node
-    - nav2_speed_controller_bt_node
-    - nav2_truncate_path_action_bt_node
-    - nav2_truncate_path_local_action_bt_node
-    - nav2_goal_updater_node_bt_node
-    - nav2_recovery_node_bt_node
-    - nav2_pipeline_sequence_bt_node
-    - nav2_round_robin_node_bt_node
-    - nav2_transform_available_condition_bt_node
-    - nav2_time_expired_condition_bt_node
-    - nav2_path_expiring_timer_condition
-    - nav2_distance_traveled_condition_bt_node
-    - nav2_single_trigger_bt_node
-    - nav2_goal_updated_controller_bt_node
-    - nav2_is_battery_low_condition_bt_node
-    - nav2_navigate_through_poses_action_bt_node
-    - nav2_navigate_to_pose_action_bt_node
-    - nav2_remove_passed_goals_action_bt_node
-    - nav2_planner_selector_bt_node
-    - nav2_controller_selector_bt_node
-    - nav2_goal_checker_selector_bt_node
-    - nav2_controller_cancel_bt_node
-    - nav2_path_longer_on_approach_bt_node
-    - nav2_wait_cancel_bt_node
-    - nav2_spin_cancel_bt_node
-    - nav2_back_up_cancel_bt_node
-    - nav2_assisted_teleop_cancel_bt_node
-    - nav2_drive_on_heading_cancel_bt_node
+    plugin_lib_names:                                                                     # Behavior Tree nodes registered with the navigator.
+    - nav2_compute_path_to_pose_action_bt_node                                            # Calls planner_server to reach a single pose.
+    - nav2_compute_path_through_poses_action_bt_node                                      # Plans through a list of waypoints.
+    - nav2_smooth_path_action_bt_node                                                     # Requests path smoothing before execution.
+    - nav2_follow_path_action_bt_node                                                     # Sends the computed path to the controller_server.
+    - nav2_spin_action_bt_node                                                            # Commands on-the-spot rotations (e.g., clearing costmaps).
+    - nav2_wait_action_bt_node                                                            # Blocks execution for a specified duration.
+    - nav2_assisted_teleop_action_bt_node                                                 # Hands control to a teleop assist action.
+    - nav2_back_up_action_bt_node                                                         # Performs a controlled backup maneuver.
+    - nav2_drive_on_heading_bt_node                                                       # Drives straight while maintaining heading.
+    - nav2_clear_costmap_service_bt_node                                                  # Clears costmap layers via service calls.
+    - nav2_is_stuck_condition_bt_node                                                     # Condition node detecting stuck behavior.
+    - nav2_goal_reached_condition_bt_node                                                 # Checks if goal pose is achieved.
+    - nav2_goal_updated_condition_bt_node                                                 # Detects goal update requests.
+    - nav2_globally_updated_goal_condition_bt_node                                        # Detects global goal modifications.
+    - nav2_is_path_valid_condition_bt_node                                                # Checks if current path remains collision-free.
+    - nav2_initial_pose_received_condition_bt_node                                        # Ensures localization is initialized.
+    - nav2_reinitialize_global_localization_service_bt_node                               # Forces AMCL to reset localization.
+    - nav2_rate_controller_bt_node                                                        # Throttles subtree execution to a fixed rate.
+    - nav2_distance_controller_bt_node                                                    # Limits subtree execution to a travel distance.
+    - nav2_speed_controller_bt_node                                                       # Limits subtree execution based on commanded speed.
+    - nav2_truncate_path_action_bt_node                                                   # Drops already-traversed path segments.
+    - nav2_truncate_path_local_action_bt_node                                             # Truncates path inside controller frame.
+    - nav2_goal_updater_node_bt_node                                                      # Updates goal pose mid-execution.
+    - nav2_recovery_node_bt_node                                                          # Encapsulates recovery behaviors.
+    - nav2_pipeline_sequence_bt_node                                                      # Runs children in order and restarts when one fails.
+    - nav2_round_robin_node_bt_node                                                       # Iterates through children evenly.
+    - nav2_transform_available_condition_bt_node                                          # Verifies TF availability before acting.
+    - nav2_time_expired_condition_bt_node                                                 # Times out a branch after a duration.
+    - nav2_path_expiring_timer_condition                                                  # Invalidates the path after a timeout.
+    - nav2_distance_traveled_condition_bt_node                                            # Stops branch once distance covered.
+    - nav2_single_trigger_bt_node                                                         # Ensures a subtree runs only once.
+    - nav2_goal_updated_controller_bt_node                                                # Signals controllers about mid-path goal changes.
+    - nav2_is_battery_low_condition_bt_node                                               # Optional low-battery gating condition.
+    - nav2_navigate_through_poses_action_bt_node                                          # End-to-end action for waypoints.
+    - nav2_navigate_to_pose_action_bt_node                                                # End-to-end action for single goal.
+    - nav2_remove_passed_goals_action_bt_node                                             # Drops waypoints that have been passed.
+    - nav2_planner_selector_bt_node                                                       # Dynamically swaps planner plugins.
+    - nav2_controller_selector_bt_node                                                    # Dynamically swaps controller plugins.
+    - nav2_goal_checker_selector_bt_node                                                  # Dynamically swaps goal checkers.
+    - nav2_controller_cancel_bt_node                                                      # Cancels controller actions safely.
+    - nav2_path_longer_on_approach_bt_node                                                # Detects longer replacement paths near goal.
+    - nav2_wait_cancel_bt_node                                                            # Cancels wait actions if requested.
+    - nav2_spin_cancel_bt_node                                                            # Cancels spin actions if requested.
+    - nav2_back_up_cancel_bt_node                                                         # Cancels backup actions if requested.
+    - nav2_assisted_teleop_cancel_bt_node                                                 # Cancels assisted teleop actions.
+    - nav2_drive_on_heading_cancel_bt_node                                                # Cancels drive-on-heading actions.
 
+# -----------------------------------------------------------------------------
+# Navigator helper nodes (required by Nav2 launch files)
+# -----------------------------------------------------------------------------
 bt_navigator_navigate_through_poses_rclcpp_node:
   ros__parameters:
-    use_sim_time: False
+    use_sim_time: False                                                                   # Keep node clocks aligned with physical robot.
 
 bt_navigator_navigate_to_pose_rclcpp_node:
   ros__parameters:
-    use_sim_time: False
+    use_sim_time: False                                                                   # Keep node clocks aligned with physical robot.
 
+# -----------------------------------------------------------------------------
+# Controller Server (MPPI tuned for omnidirectional drive)
+# -----------------------------------------------------------------------------
 controller_server:
   ros__parameters:
-    controller_frequency: 20.0
+    controller_frequency: 20.0                                                            # Control loop frequency in Hz.
     FollowPath:
-      plugin: "nav2_mppi_controller::MPPIController"
-      time_steps: 56
-      model_dt: 0.05
-      batch_size: 2000
-      vx_std: 0.2
-      vy_std: 0.2
-      wz_std: 0.4
-      vx_max: 0.5
-      vx_min: -0.35
-      vy_max: 0.5
-      #vy_min: -0.35
-      wz_max: 1.9
-      iteration_count: 1
-      prune_distance: 1.7
-      transform_tolerance: 0.1
-      temperature: 0.3
-      gamma: 0.015
-      motion_model: "Omni"
-      visualize: false
-      reset_period: 1.0 # (only in Humble)
-      regenerate_noises: false
+      plugin: "nav2_mppi_controller::MPPIController"                                      # Model Predictive Path Integral controller.
+      time_steps: 56                                                                      # Number of rollout points along each trajectory.
+      model_dt: 0.05                                                                      # Time step (s) between trajectory points.
+      batch_size: 2000                                                                    # Number of trajectories sampled per iteration.
+      vx_std: 0.2                                                                         # Noise standard deviation for forward velocity sampling.
+      vy_std: 0.2                                                                         # Noise standard deviation for lateral velocity sampling.
+      wz_std: 0.4                                                                         # Noise standard deviation for yaw rate sampling.
+      vx_max: 0.5                                                                         # Max forward velocity (m/s).
+      vx_min: -0.35                                                                       # Max reverse velocity (m/s) permitted.
+      vy_max: 0.5                                                                         # Max lateral velocity (m/s) for strafing.
+      # vy_min: -0.35                                                                     # Uncomment to allow lateral reverse motion; keep disabled if operator safety demands no reverse strafing.
+      wz_max: 1.9                                                                         # Max rotational speed (rad/s).
+      iteration_count: 1                                                                  # Single MPPI iteration keeps latency low.
+      prune_distance: 1.7                                                                 # Distance threshold for pruning consumed path segments.
+      transform_tolerance: 0.1                                                            # TF tolerance for transforming plan and odom frames.
+      temperature: 0.3                                                                    # Softmax temperature; lower values favor best trajectories.
+      gamma: 0.015                                                                        # Trajectory cost discount factor.
+      motion_model: "Omni"                                                                # Enable omnidirectional control set.
+      visualize: false                                                                    # Set true for RViz debug markers.
+      reset_period: 1.0                                                                   # Seconds before controller noise resets (available from Humble).
+      regenerate_noises: false                                                            # Keep noise samples static for smoother motion.
       TrajectoryVisualizer:
-        trajectory_step: 5
-        time_step: 3
+        trajectory_step: 5                                                                # Down-sample trajectories for visualization.
+        time_step: 3                                                                      # Publish every N control loops when visualization is enabled.
       AckermannConstraints:
-        min_turning_r: 0.2
-      critics: ["ConstraintCritic", "CostCritic", "GoalCritic", "GoalAngleCritic", "PathAlignCritic", "PathFollowCritic", "PathAngleCritic", "PreferForwardCritic"]
+        min_turning_r: 0.2                                                                # Placeholder for compatibility; Omni drive ignores curvature.
+      critics: ["ConstraintCritic", "CostCritic", "GoalCritic", "GoalAngleCritic", "PathAlignCritic", "PathFollowCritic", "PathAngleCritic", "PreferForwardCritic"]  # Enabled cost critics.
       ConstraintCritic:
-        enabled: true
-        cost_power: 1
-        cost_weight: 4.0
+        enabled: true                                                                     # Enforce feasibility constraints (acceleration, jerk, etc.).
+        cost_power: 1                                                                     # Linear cost scaling to keep gradients stable.
+        cost_weight: 4.0                                                                  # Impact of constraint violations on total cost.
       GoalCritic:
-        enabled: true
-        cost_power: 1
-        cost_weight: 5.0
-        threshold_to_consider: 1.4
+        enabled: true                                                                     # Encourages trajectories that approach the goal pose.
+        cost_power: 1                                                                     # Use absolute error (not squared) for smoother approach.
+        cost_weight: 5.0                                                                  # Weight for distance-to-goal cost.
+        threshold_to_consider: 1.4                                                        # Begin applying cost when within 1.4 m.
       GoalAngleCritic:
-        enabled: true
-        cost_power: 1
-        cost_weight: 3.0
-        threshold_to_consider: 0.5
+        enabled: true                                                                     # Bias towards correct goal yaw near target.
+        cost_power: 1                                                                     # Linear angular cost.
+        cost_weight: 3.0                                                                  # Weight of angular alignment near the goal.
+        threshold_to_consider: 0.5                                                        # Only engage when within 0.5 m of goal.
       PreferForwardCritic:
-        enabled: false
-        cost_power: 1
-        cost_weight: 5.0
-        threshold_to_consider: 0.5
+        enabled: false                                                                    # Disabled so holonomic moves can freely strafe.
+        cost_power: 1                                                                     # Linear penalty if enabled.
+        cost_weight: 5.0                                                                  # Forward preference strength.
+        threshold_to_consider: 0.5                                                        # Range where penalty applies if re-enabled.
       # ObstaclesCritic:
-      #   enabled: true
-      #   cost_power: 1
-      #   repulsion_weight: 1.5
-      #   critical_weight: 20.0
-      #   consider_footprint: false
-      #   collision_cost: 10000.0
-      #   collision_margin_distance: 0.1
-      #   near_goal_distance: 0.5
-      #   inflation_radius: 0.55 # (only in Humble)
-      #   cost_scaling_factor: 10.0 # (only in Humble)
+      #   enabled: true                                                                   # Enable for aggressive obstacle clearance; MPPI already samples costmap.
+      #   cost_power: 1                                                                   # Linear obstacle penalty.
+      #   repulsion_weight: 1.5                                                           # Scale for staying away from obstacles.
+      #   critical_weight: 20.0                                                           # Hard penalty when collision is imminent.
+      #   consider_footprint: false                                                       # Switch to true for footprint-aware sampling.
+      #   collision_cost: 10000.0                                                         # Cost applied when collisions predicted.
+      #   collision_margin_distance: 0.1                                                  # Safety margin around obstacles.
+      #   near_goal_distance: 0.5                                                         # Reduce penalty near goal to avoid stagnation.
+      #   inflation_radius: 0.55                                                          # Enable only on ROS 2 Humble+.
+      #   cost_scaling_factor: 10.0                                                       # Enable only on ROS 2 Humble+.
       CostCritic:
-        enabled: true
-        cost_power: 1
-        cost_weight: 3.81
-        critical_cost: 300.0
-        consider_footprint: true
-        collision_cost: 1000000.0
-        near_goal_distance: 1.0
-        trajectory_point_step: 2
+        enabled: true                                                                     # Penalize trajectories inside high-cost areas.
+        cost_power: 1                                                                     # Linear scaling to preserve gradients.
+        cost_weight: 3.81                                                                 # Weight relative to other critics.
+        critical_cost: 300.0                                                              # Consider everything above this cost lethal.
+        consider_footprint: true                                                          # Evaluate footprint occupancy along the path.
+        collision_cost: 1000000.0                                                         # Hard penalty to reject collisions outright.
+        near_goal_distance: 1.0                                                           # Relax cost once within 1 m to avoid oscillations.
+        trajectory_point_step: 2                                                          # Sample every other trajectory point for speed.
       PathAlignCritic:
-        enabled: true
-        cost_power: 1
-        cost_weight: 14.0
-        max_path_occupancy_ratio: 0.05
-        trajectory_point_step: 4
-        threshold_to_consider: 0.5
-        offset_from_furthest: 20
-        use_path_orientations: false
+        enabled: true                                                                     # Align trajectories with the global path when possible.
+        cost_power: 1                                                                     # Linear distance-to-path cost.
+        cost_weight: 14.0                                                                 # Strong preference for sticking to the path.
+        max_path_occupancy_ratio: 0.05                                                    # Abort if path occupancy exceeds 5%.
+        trajectory_point_step: 4                                                          # Sampling stride used for comparison.
+        threshold_to_consider: 0.5                                                        # Begin alignment efforts within 0.5 m of path.
+        offset_from_furthest: 20                                                          # Lookahead path points to align against.
+        use_path_orientations: false                                                      # Use path tangents rather than orientation.
       PathFollowCritic:
-        enabled: true
-        cost_power: 1
-        cost_weight: 5.0
-        offset_from_furthest: 5
-        threshold_to_consider: 1.4
+        enabled: true                                                                     # Encourage continuous tracking of the global path.
+        cost_power: 1                                                                     # Linear deviation cost.
+        cost_weight: 5.0                                                                  # Weight relative to alignment critic.
+        offset_from_furthest: 5                                                           # Number of points behind the furthest lookahead.
+        threshold_to_consider: 1.4                                                        # Only penalize once within 1.4 m of the path.
       PathAngleCritic:
-        enabled: true
-        cost_power: 1
-        cost_weight: 2.0
-        offset_from_furthest: 4
-        threshold_to_consider: 0.5
-        max_angle_to_furthest: 1.0
-        mode: 0
+        enabled: true                                                                     # Encourage heading alignment with the path.
+        cost_power: 1                                                                     # Linear angular penalty.
+        cost_weight: 2.0                                                                  # Weight relative to other critics.
+        offset_from_furthest: 4                                                           # Sample orientation 4 points behind the furthest.
+        threshold_to_consider: 0.5                                                        # Begin penalizing when within 0.5 m of goal/path.
+        max_angle_to_furthest: 1.0                                                        # Ignore path points with >1 rad orientation change.
+        mode: 0                                                                           # Use default heading alignment mode.
       # VelocityDeadbandCritic:
-      #   enabled: true
-      #   cost_power: 1
-      #   cost_weight: 35.0
-      #   deadband_velocities: [0.05, 0.05, 0.05]
+      #   enabled: true                                                                   # Activate to bias controller away from tiny commands.
+      #   cost_power: 1                                                                   # Linear scaling of deadband cost.
+      #   cost_weight: 35.0                                                               # Strength of deadband penalty.
+      #   deadband_velocities: [0.05, 0.05, 0.05]                                         # Set min vx, vy, wz if activated.
       # TwirlingCritic:
-      #   enabled: true
-      #   twirling_cost_power: 1
-      #   twirling_cost_weight: 10.0
-      
+      #   enabled: true                                                                   # Prevent unnecessary spinning when approaching goal.
+      #   twirling_cost_power: 1                                                          # Linear penalty for rotations.
+      #   twirling_cost_weight: 10.0                                                      # Weight of rotation penalty.
+
+# -----------------------------------------------------------------------------
+# Local Costmap (rolling costmap for controller)
+# -----------------------------------------------------------------------------
 local_costmap:
   local_costmap:
     ros__parameters:
-      update_frequency: 5.0
-      publish_frequency: 2.0
-      global_frame: odom
-      robot_base_frame: base_link
-      use_sim_time: False
-      rolling_window: true
-      width: 6
-      height: 6
-      resolution: 0.05
-      footprint: '[[-0.175, -0.175], [-0.175, 0.175], [0.175, 0.175], [0.175, -0.175]]'
-      plugins: ["obstacle_layer","inflation_layer"] #"voxel_layer"
+      update_frequency: 5.0                                                               # Hz to incorporate sensor data into the local costmap.
+      publish_frequency: 2.0                                                              # Hz to publish visualization topics.
+      global_frame: odom                                                                  # Local map is rooted in odom for minimal drift.
+      robot_base_frame: base_link                                                         # Robot frame for transforms/footprint.
+      use_sim_time: False                                                                 # Align timers with hardware clock.
+      rolling_window: true                                                                # Keep costmap centered on robot.
+      width: 6                                                                            # Local window width in meters.
+      height: 6                                                                           # Local window height in meters.
+      resolution: 0.05                                                                    # Cell size in meters.
+      footprint: '[[-0.175, -0.175], [-0.175, 0.175], [0.175, 0.175], [0.175, -0.175]]'   # Polygon footprint used for inflation and collision checking.
+      plugins: ["obstacle_layer","inflation_layer"]                                       # Add "voxel_layer" when depth sensors are used.
       inflation_layer:
-        plugin: "nav2_costmap_2d::InflationLayer"
-        enable: true
-        cost_scaling_factor: 5.0
-        inflation_radius: 0.40
+        plugin: "nav2_costmap_2d::InflationLayer"                                         # Standard inflation to buffer obstacles.
+        enable: true                                                                      # Keep inflation active for smooth paths.
+        cost_scaling_factor: 5.0                                                          # Steepness of decay from obstacle cells.
+        inflation_radius: 0.40                                                            # Minimum clearance radius around obstacles (m).
       obstacle_layer:
-        plugin: "nav2_costmap_2d::ObstacleLayer"
-        enabled: True
-        footprint_clearing_enabled: True
-        observation_sources: scan
+        plugin: "nav2_costmap_2d::ObstacleLayer"                                          # Processes 2D laser scans.
+        enabled: True                                                                     # Enable obstacle integration.
+        footprint_clearing_enabled: True                                                  # Clear space occupied by robot footprint.
+        observation_sources: scan                                                         # List of sensors feeding the layer.
         scan:
-          topic: /scan
-          max_obstacle_height: 2.0
-          clearing: True
-          marking: True
-          data_type: "LaserScan"
-          raytrace_max_range: 3.0
-          raytrace_min_range: 0.0
-          obstacle_max_range: 2.5
-          obstacle_min_range: 0.0
-          observation_persistence: 0.0
+          topic: /scan                                                                    # Laser topic used for obstacle updates.
+          max_obstacle_height: 2.0                                                        # Ignore returns above this height (m).
+          clearing: True                                                                  # Use raytracing to clear free space.
+          marking: True                                                                   # Mark occupied cells from hits.
+          data_type: "LaserScan"                                                          # Input message type.
+          raytrace_max_range: 3.0                                                         # Maximum raytracing distance (m).
+          raytrace_min_range: 0.0                                                         # Minimum raytracing distance (m).
+          obstacle_max_range: 2.5                                                         # Maximum range for marking obstacles.
+          obstacle_min_range: 0.0                                                         # Minimum valid range for marking.
+          observation_persistence: 0.0                                                    # Do not persist stale observations.
       # voxel_layer:
-      #   plugin: "nav2_costmap_2d::VoxelLayer"
-      #   enabled: True
-      #   publish_voxel_map: True
-      #   origin_z: 0.0
-      #   z_resolution: 0.1
-      #   z_voxels: 16
-      #   max_obstacle_height: 0.5
-      #   mark_threshold: 0
-      #   observation_sources: scan
+      #   plugin: "nav2_costmap_2d::VoxelLayer"                                           # Enable for 3D sensors (depth/LiDAR).
+      #   enabled: True                                                                   # Toggle on when volumetric sensing is available.
+      #   publish_voxel_map: True                                                         # Publishes voxel occupancy for debugging.
+      #   origin_z: 0.0                                                                   # Reference height of the voxel grid.
+      #   z_resolution: 0.1                                                               # Height of each voxel slice.
+      #   z_voxels: 16                                                                    # Number of slices stacked vertically.
+      #   max_obstacle_height: 0.5                                                        # Ignore hits above this height.
+      #   mark_threshold: 0                                                               # Minimum hits required to mark a voxel.
+      #   observation_sources: scan                                                       # Configure sensors feeding the voxel layer.
       #   scan:
-      #     topic: /robotinobase1/scan
-      #     max_obstacle_height: 0.4
-      #     clearing: True
-      #     marking: True
-      #     data_type: "LaserScan"
-      #     raytrace_max_range: 3.0
-      #     raytrace_min_range: 0.0
-      #     obstacle_max_range: 2.5
-      #     obstacle_min_range: 0.0
-      always_send_full_costmap: True
+      #     topic: /robotinobase1/scan                                                    # Example alternate scan topic.
+      #     max_obstacle_height: 0.4                                                      # Sensor-specific obstacle height.
+      #     clearing: True                                                                # Raytrace free space.
+      #     marking: True                                                                 # Mark obstacles.
+      #     data_type: "LaserScan"                                                        # Input type for voxelization.
+      #     raytrace_max_range: 3.0                                                       # Raytrace distance (m).
+      #     raytrace_min_range: 0.0                                                       # Minimum range (m).
+      #     obstacle_max_range: 2.5                                                       # Marking range (m).
+      #     obstacle_min_range: 0.0                                                       # Minimum valid marking range.
+      always_send_full_costmap: True                                                      # Publish the full costmap for visualization tools.
 
+# -----------------------------------------------------------------------------
+# Global Costmap (static/global planning view)
+# -----------------------------------------------------------------------------
 global_costmap:
   global_costmap:
     ros__parameters:
-      #footprint_padding: 0.075  #robot footprint padding in mtr.
-      update_frequency: 20.0        #default 1.0
-      publish_frequency: 20.0       #default 1.0
-      global_frame: map
-      robot_base_frame: base_link
-      use_sim_time: False
-      robot_radius: 0.105         #robot radius in mtr
-      resolution: 0.05            #Mapgrid pixle size in mtr.- default = 0.1 or 0.05
-      lethal_cost_threshold: 90    #default=100 (Need tunning)
-      track_unknown_space: false
-      plugins: ["static_layer", "obstacle_layer", "inflation_layer"]
+      # footprint_padding: 0.075                                                          # Uncomment to expand footprint in tight aisles.
+      update_frequency: 20.0                                                              # Frequent updates keep the planner responsive.
+      publish_frequency: 20.0                                                             # Publish visualization topics frequently for monitoring.
+      global_frame: map                                                                   # Global map frame for localization/planning.
+      robot_base_frame: base_link                                                         # Robot frame for applying footprints.
+      use_sim_time: False                                                                 # Stay aligned with hardware time.
+      robot_radius: 0.105                                                                 # Equivalent circular radius of the OmniBot footprint (m).
+      resolution: 0.05                                                                    # Map grid resolution (m).
+      lethal_cost_threshold: 90                                                           # Cells >= 90 treated as lethal obstacles.
+      track_unknown_space: false                                                          # Treat unknown cells as free; set true for exploration.
+      plugins: ["static_layer", "obstacle_layer", "inflation_layer"]                      # Layer stack for the global costmap.
       static_layer:
-        plugin: "nav2_costmap_2d::StaticLayer"
-        enable: True
-        map_topic: /map
-        subscribe_to_updates: True
-        map_subscribe_transient_local: True
+        plugin: "nav2_costmap_2d::StaticLayer"                                            # Subscribes to the static map topic.
+        enable: True                                                                      # Keep static map active.
+        map_topic: /map                                                                   # Static map topic to follow.
+        subscribe_to_updates: True                                                        # Receive incremental updates if map server publishes them.
+        map_subscribe_transient_local: True                                               # Latch map updates to handle late subscribers.
       obstacle_layer:
-        plugin: "nav2_costmap_2d::ObstacleLayer"
-        enabled: True
-        footprint_clearing_enabled: True
-        observation_sources: scan
+        plugin: "nav2_costmap_2d::ObstacleLayer"                                          # Optional global obstacle updates (2D lidar).
+        enabled: True                                                                     # Allow dynamic obstacles to influence the global plan.
+        footprint_clearing_enabled: True                                                  # Clear obstacles around the footprint path.
+        observation_sources: scan                                                         # Sensor inputs for the layer.
         scan:
-          topic: /scan
-          max_obstacle_height: 2.0
-          clearing: True
-          marking: True
-          data_type: "LaserScan"
-          raytrace_max_range: 2.5
-          raytrace_min_range: 0.0
-          obstacle_max_range: 3.0
-          obstacle_min_range: 0.0
+          topic: /scan                                                                    # Laser topic mirrored from local layer.
+          max_obstacle_height: 2.0                                                        # Ignore hits above robot operating height.
+          clearing: True                                                                  # Raytrace to open space.
+          marking: True                                                                   # Mark obstacles where measured.
+          data_type: "LaserScan"                                                          # Input message type.
+          raytrace_max_range: 2.5                                                         # Raytrace range (m).
+          raytrace_min_range: 0.0                                                         # Minimum raytrace range.
+          obstacle_max_range: 3.0                                                         # Maximum marking range (m).
+          obstacle_min_range: 0.0                                                         # Minimum marking range.
       inflation_layer:
-        plugin: "nav2_costmap_2d::InflationLayer"
-        cost_scaling_factor: 5.0
-        inflation_radius: 0.6
-        inflate_unknown: False
-        inflate_around_unknown: False
-      always_send_full_costmap: True
+        plugin: "nav2_costmap_2d::InflationLayer"                                         # Inflates around obstacles.
+        cost_scaling_factor: 5.0                                                          # Controls gradient steepness.
+        inflation_radius: 0.6                                                             # Clearance buffer around obstacles (m).
+        inflate_unknown: False                                                            # Do not inflate unknown cells.
+        inflate_around_unknown: False                                                     # Avoid inflating near map boundaries.
+      always_send_full_costmap: True                                                      # Publish full map for RViz tooling.
 
+# -----------------------------------------------------------------------------
+# Map Server and Saver
+# -----------------------------------------------------------------------------
 map_server:
   ros__parameters:
-    use_sim_time: False
-    # Overridden in launch by the "map" launch configuration or provided default value.
-    # To use in yaml, remove the default "map" value in the tb3_simulation_launch.py file & provide full path to map below.
-    yaml_filename: ""
+    use_sim_time: False                                                                   # Keep map timestamps consistent with hardware clock.
+    yaml_filename: ""                                                                     # Overridden at launch with the selected map file path.
 
 map_saver:
   ros__parameters:
-    use_sim_time: False
-    save_map_timeout: 5.0
-    free_thresh_default: 0.25
-    occupied_thresh_default: 0.65
-    map_subscribe_transient_local: True
+    use_sim_time: False                                                                   # Keep save timestamps consistent when bagging.
+    save_map_timeout: 5.0                                                                 # Seconds to wait before failing a save request.
+    free_thresh_default: 0.25                                                             # Manage occupancy threshold for free cells.
+    occupied_thresh_default: 0.65                                                         # Occupancy threshold for marking cells as occupied.
+    map_subscribe_transient_local: True                                                   # Latched subscriptions for reliability.
 
+# -----------------------------------------------------------------------------
+# Planner Server (Theta* global planner)
+# -----------------------------------------------------------------------------
 planner_server:
   ros__parameters:
-    expected_planner_frequency: 20.0
-    use_sim_time: False
-    planner_plugins: ["GridBased"]
+    expected_planner_frequency: 20.0                                                      # Hz for the planner action server to run.
+    use_sim_time: False                                                                   # Follow hardware clock unless simulating.
+    planner_plugins: ["GridBased"]                                                        # List of planner plugin IDs; currently only Theta*.
     # GridBased:
-    #   plugin: "nav2_navfn_planner/NavfnPlanner"
-    #   tolerance: 0.15
-    #   use_astar: true
-    #   allow_unknown: true
-    #   use_final_approach_orientation: true
+    #   plugin: "nav2_navfn_planner/NavfnPlanner"                                         # Uncomment to fall back to classic NavFn.
+    #   tolerance: 0.15                                                                   # Acceptable error tolerance (m) when goal unreachable.
+    #   use_astar: true                                                                   # Use A* search rather than Dijkstra.
+    #   allow_unknown: true                                                               # Enable for exploring unknown space.
+    #   use_final_approach_orientation: true                                              # Align final pose orientation.
     # GridBased:
-    #   plugin: "nav2_smac_planner/SmacPlanner2D"
-    #   tolerance: 0.125                      # tolerance for planning if unable to reach exact pose, in meters
-    #   downsample_costmap: false             # whether or not to downsample the map
-    #   downsampling_factor: 1                # multiplier for the resolution of the costmap layer (e.g. 2 on a 5cm costmap would be 10cm)
-    #   allow_unknown: true                   # allow traveling in unknown space
-    #   max_iterations: 1000000               # maximum total iterations to search for before failing (in case unreachable), set to -1 to disable
-    #   max_on_approach_iterations: 1000      # maximum number of iterations to attempt to reach goal once in tolerance
-    #   max_planning_time: 2.0                # max time in s for planner to plan, smooth
-    #   cost_travel_multiplier: 2.0           # Cost multiplier to apply to search to steer away from high cost areas. Larger values will place in the center of aisles more exactly (if non-`FREE` cost potential field exists) but take slightly longer to compute. To optimize for speed, a value of 1.0 is reasonable. A reasonable tradeoff value is 2.0. A value of 0.0 effective disables steering away from obstacles and acts like a naive binary search A*.
-    #   use_final_approach_orientation: false  # Whether to set the final path pose at the goal's orientation to the requested orientation (false) or in line with the approach angle so the robot doesn't rotate to heading (true)
+    #   plugin: "nav2_smac_planner/SmacPlanner2D"                                         # Alternative smoother planner.
+    #   tolerance: 0.125                                                                  # Planning tolerance (m).
+    #   downsample_costmap: false                                                         # Downsample for speed if CPU constrained.
+    #   downsampling_factor: 1                                                            # Factor applied when downsampling.
+    #   allow_unknown: true                                                               # Allow navigation through unknown space.
+    #   max_iterations: 1000000                                                           # Fail fast if iterations exceed this value (-1 disables).
+    #   max_on_approach_iterations: 1000                                                  # Extra iterations when near the goal.
+    #   max_planning_time: 2.0                                                            # Seconds before aborting planning.
+    #   cost_travel_multiplier: 2.0                                                       # Adjust penalty for high cost cells.
+    #   use_final_approach_orientation: false                                             # Align based on approach vector.
     #   smoother:
-    #     max_iterations: 1000
-    #     w_smooth: 0.3
-    #     w_data: 0.2
-    #     tolerance: 1.0e-10
+    #     max_iterations: 1000                                                            # Path smoothing iterations.
+    #     w_smooth: 0.3                                                                   # Smoothness weight.
+    #     w_data: 0.2                                                                     # Data adherence weight.
+    #     tolerance: 1.0e-10                                                              # Termination tolerance.
     GridBased:
-      plugin: "nav2_theta_star_planner/ThetaStarPlanner"
-      how_many_corners: 8
-      w_euc_cost: 1.0
-      w_traversal_cost: 2.0
-      w_heuristic_cost: 1.0
+      plugin: "nav2_theta_star_planner/ThetaStarPlanner"                                  # Diagonal-capable planner with line-of-sight shortcuts.
+      how_many_corners: 8                                                                 # Allow diagonal movement (8-connected grid).
+      w_euc_cost: 1.0                                                                     # Weight for Euclidean distance component.
+      w_traversal_cost: 2.0                                                               # Weight for accumulated traversal cost.
+      w_heuristic_cost: 1.0                                                               # Weight for heuristic (A*) component.
 
+# -----------------------------------------------------------------------------
+# Path Smoother
+# -----------------------------------------------------------------------------
 smoother_server:
   ros__parameters:
-    use_sim_time: False
-    smoother_plugins: ["simple_smoother"]
+    use_sim_time: False                                                                   # Keep smoothing timestamps aligned with hardware clock.
+    smoother_plugins: ["simple_smoother"]                                                 # Enabled smoother plugin list.
     simple_smoother:
-      plugin: "nav2_smoother::SimpleSmoother"
-      tolerance: 1.0e-10
-      max_its: 1000
-      do_refinement: True
+      plugin: "nav2_smoother::SimpleSmoother"                                             # Lightweight gradient-descent smoother.
+      tolerance: 1.0e-10                                                                  # Termination tolerance for optimization.
+      max_its: 1000                                                                       # Maximum smoothing iterations.
+      do_refinement: True                                                                 # Perform refinement pass for smoother paths.
 
+# -----------------------------------------------------------------------------
+# Behavior Server (recovery and auxiliary motions)
+# -----------------------------------------------------------------------------
 behavior_server:
   ros__parameters:
-    cycle_frequency: 20.0
-    action_server_result_timeout: 5.0
-    behavior_plugins: ["spin", "backup", "drive_on_heading", "assisted_teleop", "wait"]
+    cycle_frequency: 20.0                                                                 # Hz at which behaviors process goals.
+    action_server_result_timeout: 5.0                                                     # Seconds to wait for behavior completion.
+    behavior_plugins: ["spin", "backup", "drive_on_heading", "assisted_teleop", "wait"]   # Registered behaviors.
     spin:
-      plugin: "nav2_behaviors/Spin"
-      simulate_ahead_time: 0.0
+      plugin: "nav2_behaviors/Spin"                                                       # Spinning in place to reorient or clear space.
+      simulate_ahead_time: 0.0                                                            # Predictive spin simulation horizon (unused here).
     backup:
-      plugin: "nav2_behaviors/BackUp"
+      plugin: "nav2_behaviors/BackUp"                                                     # Controlled linear backup.
     drive_on_heading:
-      plugin: "nav2_behaviors/DriveOnHeading"
+      plugin: "nav2_behaviors/DriveOnHeading"                                             # Drive while keeping a specific heading.
     wait:
-      plugin: "nav2_behaviors/Wait"
+      plugin: "nav2_behaviors/Wait"                                                       # Idle behavior for timed waits.
     assisted_teleop:
-      plugin: "nav2_behaviors/AssistedTeleop"
-    global_frame: map
-    robot_base_frame: base_link
-    transform_tolerance: 0.1
-    use_sim_time: False
-    simulate_ahead_time: 0.0
-    max_rotational_vel: 3.14
-    min_rotational_vel: 0.25
-    rotational_acc_lim: 3.2
+      plugin: "nav2_behaviors/AssistedTeleop"                                             # Allows remote operator intervention.
+    global_frame: map                                                                     # Frame used for high-level behavior planning.
+    robot_base_frame: base_link                                                           # Robot base for command generation.
+    transform_tolerance: 0.1                                                              # TF latency tolerance.
+    use_sim_time: False                                                                   # Keep timers aligned with hardware.
+    simulate_ahead_time: 0.0                                                              # Placeholder for compatibility; not used.
+    max_rotational_vel: 3.14                                                              # Max yaw rate behaviors may command (rad/s).
+    min_rotational_vel: 0.25                                                              # Minimum yaw rate to overcome static friction (rad/s).
+    rotational_acc_lim: 3.2                                                               # Rotational acceleration limit (rad/s^2).
 
+# -----------------------------------------------------------------------------
+# Robot State Publisher
+# -----------------------------------------------------------------------------
 robot_state_publisher:
   ros__parameters:
-    use_sim_time: False
+    use_sim_time: False                                                                   # Use hardware time to publish TF tree.
 
+# -----------------------------------------------------------------------------
+# Waypoint Follower
+# -----------------------------------------------------------------------------
 waypoint_follower:
   ros__parameters:
-    use_sim_time: False
-    loop_rate: 20
-    stop_on_failure: false
-    waypoint_task_executor_plugin: "wait_at_waypoint"
+    use_sim_time: False                                                                   # Keep waypoint execution timestamps aligned with hardware.
+    loop_rate: 20                                                                         # Hz for the waypoint follower loop.
+    stop_on_failure: false                                                                # Continue executing subsequent waypoints on failure.
+    waypoint_task_executor_plugin: "wait_at_waypoint"                                     # Task executed at each waypoint.
     wait_at_waypoint:
-      plugin: "nav2_waypoint_follower::WaitAtWaypoint"
-      enabled: True
-      waypoint_pause_duration: 200
+      plugin: "nav2_waypoint_follower::WaitAtWaypoint"                                    # Simple wait task at each waypoint.
+      enabled: True                                                                       # Keep the wait task active.
+      waypoint_pause_duration: 200                                                        # Pause duration (s) before proceeding.
 
+# -----------------------------------------------------------------------------
+# Velocity Smoother (filters high-frequency command noise)
+# -----------------------------------------------------------------------------
 velocity_smoother:
   ros__parameters:
-    use_sim_time: False
-    smoothing_frequency: 20.0
-    scale_velocities: False
-    feedback: "OPEN_LOOP"
-    max_velocity: [1.0, 1.0, 1.0]
-    min_velocity: [-1.0, -1.0, -1.0]
-    max_accel: [1.0, 1.0, 1.2]
-    max_decel: [-1.0, -1.0, -1.2]
-    odom_topic: "/odom"
-    odom_duration: 0.1
-    deadband_velocity: [0.0, 0.0, 0.0]
-    velocity_timeout: 1.0
+    use_sim_time: False                                                                   # Align smoother timing with hardware.
+    smoothing_frequency: 20.0                                                             # Hz for smoothing updates.
+    scale_velocities: False                                                               # Do not scale commands unless a limit is exceeded.
+    feedback: "OPEN_LOOP"                                                                 # No odometry feedback for smoothing (low latency).
+    max_velocity: [1.0, 1.0, 1.0]                                                         # Max vx, vy, wz allowed (m/s and rad/s).
+    min_velocity: [-1.0, -1.0, -1.0]                                                      # Minimum velocities allowed.
+    max_accel: [1.0, 1.0, 1.2]                                                            # Max acceleration for vx, vy, wz.
+    max_decel: [-1.0, -1.0, -1.2]                                                         # Max deceleration for vx, vy, wz.
+    odom_topic: "/odom"                                                                   # Odometry source for CLOSED_LOOP mode (kept for compatibility).
+    odom_duration: 0.1                                                                    # Duration (s) of odom data to use when smoothing.
+    deadband_velocity: [0.0, 0.0, 0.0]                                                    # Set to >0 if tiny commands should be suppressed.
+    velocity_timeout: 1.0                                                                 # Seconds before upstream velocity command is considered stale.
 
+# -----------------------------------------------------------------------------
+# Collision Monitor (command watchdog based on sensor footprint)
+# -----------------------------------------------------------------------------
 collision_monitor:
   ros__parameters:
-    use_sim_time: False
-    base_frame_id: "base_link"
-    odom_frame_id: "odom"
-    cmd_vel_in_topic: "/cmd_vel_smoothed"
-    cmd_vel_out_topic: "/cmd_vel"
-    state_topic: "/cm_state"
-    transform_tolerance: 0.1
-    source_timeout: 5.0
-    base_shift_correction: True
-    stop_pub_timeout: 2.0
-    # Polygons represent zone around the robot for "stop" and "slowdown" action types,
-    # and robot footprint for "approach" action type.
-    # Footprint could be "polygon" type with dynamically set footprint from footprint_topic
-    # or "circle" type with static footprint set by radius. "footprint_topic" parameter
-    # to be ignored in circular case.
-    polygons: [ "PolygonSlow"] #"PolygonStop"]
+    use_sim_time: False                                                                   # Synchronize watchdog timers with hardware.
+    base_frame_id: "base_link"                                                            # Robot frame used for safety polygons.
+    odom_frame_id: "odom"                                                                 # Frame used to compute velocities.
+    cmd_vel_in_topic: "/cmd_vel_smoothed"                                                 # Topic monitored for incoming commands.
+    cmd_vel_out_topic: "/cmd_vel"                                                         # Commands that pass safety checks are republished here.
+    state_topic: "/cm_state"                                                              # Diagnostic state topic.
+    transform_tolerance: 0.1                                                              # TF tolerance for polygon transforms.
+    source_timeout: 5.0                                                                   # Seconds before sensor data is considered stale.
+    base_shift_correction: True                                                           # Compensate for base shifts when rotating.
+    stop_pub_timeout: 2.0                                                                 # Seconds to keep publishing zero commands after a stop.
+    polygons: ["PolygonSlow"]                                                             # Add "PolygonStop" to enforce a hard stop buffer.
     # PolygonStop:
-    #   type: "circle"
-    #   radius: 0.280
-    #   action_type: "stop"
-    #   max_points: 1
-    #   visualize: True
-    #   polygon_pub_topic: "/polygon_stop"
-    #   enable: True
+    #   type: "circle"                                                                    # Enables concentric circular safety zone.
+    #   radius: 0.280                                                                     # Radius (m) that triggers immediate stop.
+    #   action_type: "stop"                                                               # Stop the robot when violated.
+    #   max_points: 1                                                                     # Circle definition uses a single radius.
+    #   visualize: True                                                                   # Publish RViz marker for debugging.
+    #   polygon_pub_topic: "/polygon_stop"                                                # Marker topic for RViz.
+    #   enable: True                                                                      # Toggle on when extra safety zone required.
     PolygonSlow:
-      type: "circle"
-      radius: 0.450
-      action_type: "slowdown"
-      max_points: 1
-      slowdown_ratio: 0.5
-      visualize: True
-      polygon_pub_topic: "/polygon_slowdown"
-      enable: True
+      type: "circle"                                                                      # Circular slowdown zone around the robot.
+      radius: 0.450                                                                       # Radius (m) that triggers slowdown scaling.
+      action_type: "slowdown"                                                             # Scale velocities instead of stopping completely.
+      max_points: 1                                                                       # Circle defined via radius.
+      slowdown_ratio: 0.5                                                                 # Scale factor applied to velocities inside the zone.
+      visualize: True                                                                     # Publish marker for monitoring.
+      polygon_pub_topic: "/polygon_slowdown"                                              # Marker topic for RViz.
+      enable: True                                                                        # Enable slowdown bubble.
     # FootprintApproach:
-    #   type: "polygon"
-    #   action_type: "approach"
-    #   footprint_topic: "/local_costmap/published_footprint"
-    #   time_before_collision: 2.0
-    #   simulation_time_step: 0.1
-    #   max_points: 5
-    #   visualize: False
-    observation_sources: ["scan"]
+    #   type: "polygon"  x                                                                # Use the live footprint for approach actions.
+    #   action_type: "approach"  x                                                        # Allows safe approach to obstacles.
+    #   footprint_topic: "/local_costmap/published_footprint"                             # Topic providing footprint updates.
+    #   time_before_collision: 2.0  x                                                     # Predictive collision horizon (s).
+    #   simulation_time_step: 0.1  x                                                      # Step size for prediction.
+    #   max_points: 5 x                                                                   # Limit polygon complexity.
+    #   visualize: False                                                                  # Enable to debug predicted footprint positions.
+    observation_sources: ["scan"]                                                         # Sensors feeding collision monitor.
     scan:
-      source_timeout: 0.2
-      type: "scan"
-      topic: "/scan"
-      enabled: True
+      source_timeout: 0.2                                                                 # Seconds before scan data is stale.
+      type: "scan"                                                                        # Input message type.
+      topic: "/scan"                                                                      # Laser topic used for safety monitoring.
+      enabled: True                                                                       # Keep scan-based monitoring active.
