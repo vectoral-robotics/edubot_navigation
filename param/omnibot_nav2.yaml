@@ -151,9 +151,9 @@ controller_server:
       vx_std: 0.2                                                                         # Noise standard deviation for forward velocity sampling.
       vy_std: 0.2                                                                         # Noise standard deviation for lateral velocity sampling.
       wz_std: 0.4                                                                         # Noise standard deviation for yaw rate sampling.
-      vx_max: 0.5                                                                         # Max forward velocity (m/s).
-      vx_min: -0.35                                                                       # Max reverse velocity (m/s) permitted.
-      vy_max: 0.5                                                                         # Max lateral velocity (m/s) for strafing.
+      vx_max: 0.45                                                                        # Max forward velocity (m/s).
+      vx_min: -0.45                                                                       # Max reverse velocity (m/s) permitted.
+      vy_max: 0.45                                                                        # Max lateral velocity (m/s) for strafing.
       # vy_min: -0.35                                                                     # Uncomment to allow lateral reverse motion; keep disabled if operator safety demands no reverse strafing.
       wz_max: 1.9                                                                         # Max rotational speed (rad/s).
       iteration_count: 1                                                                  # Single MPPI iteration keeps latency low.
