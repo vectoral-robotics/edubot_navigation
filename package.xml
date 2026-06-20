@@ -1,10 +1,10 @@
 <?xml version="1.0"?>
 <package format="3">
-  <name>omnibot_navigation</name>
+  <name>edubot_navigation</name>
   <version>0.0.1</version>
   <description>
-    The omnibot_navigation package provides ROS 2 launch scripts and configuration
-    files for starting the navigation stack on the OmniBot platform.
+    The edubot_navigation package provides ROS 2 launch scripts and configuration
+    files for starting the navigation stack on the EduBot platform.
   </description>
 
   <maintainer email="dev@siegler.one">Stefan Siegler</maintainer>

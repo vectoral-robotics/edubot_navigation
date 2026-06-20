@@ -1,5 +1,5 @@
 # =============================================================================
-# OmniBot SLAM Toolbox Configuration
+# EduBot SLAM Toolbox Configuration
 # =============================================================================
 
 slam_toolbox:
@@ -17,7 +17,7 @@ slam_toolbox:
     # -------------------------------------------------------------------------
     # Core Frames and ROS Interfaces
     # -------------------------------------------------------------------------
-    odom_frame: odom                                                              # Matches omnibot_hardware odom publisher.
+    odom_frame: odom                                                              # Matches edubot_hardware odom publisher.
     map_frame: map                                                                # SLAM publishes the global frame.
     base_frame: base_link                                                         # Robot base used by Nav2 and TF.
     scan_topic: /scan                                                             # LD LiDAR driver topic.

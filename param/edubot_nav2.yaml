@@ -1,7 +1,7 @@
 # =============================================================================
-# OmniBot Nav2 Configuration
+# EduBot Nav2 Configuration
 # =============================================================================
-# Each section documents the tuned parameters for the omnidirectional OmniBot.
+# Each section documents the tuned parameters for the omnidirectional EduBot.
 # Comments describe the reasoning behind every parameter so the file can be
 # maintained confidently in production. Commented parameters include guidance
 # on when they should be re-enabled.
@@ -315,7 +315,7 @@ global_costmap:
       global_frame: map                                                                   # Global map frame for localization/planning.
       robot_base_frame: base_link                                                         # Robot frame for applying footprints.
       use_sim_time: False                                                                 # Stay aligned with hardware time.
-      robot_radius: 0.105                                                                 # Equivalent circular radius of the OmniBot footprint (m).
+      robot_radius: 0.105                                                                 # Equivalent circular radius of the EduBot footprint (m).
       resolution: 0.05                                                                    # Map grid resolution (m).
       lethal_cost_threshold: 90                                                           # Cells >= 90 treated as lethal obstacles.
       track_unknown_space: false                                                          # Treat unknown cells as free; set true for exploration.

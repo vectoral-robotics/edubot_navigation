@@ -1,9 +1,9 @@
 """
-Navigation bringup for OmniBot.
+Navigation bringup for EduBot.
 
 Launches:
   - nav2_bringup (map_server, AMCL, planner, controller, recoveries, etc.)
-  - optional RViz2 visualization (via omnibot_viz)
+  - optional RViz2 visualization (via edubot_viz)
 """
 
 import os
@@ -26,7 +26,7 @@ def generate_launch_description():
         'use_rviz': ('true', 'Start RViz automatically'),
         'map': (
             PathJoinSubstitution([
-                FindPackageShare('omnibot_navigation'),
+                FindPackageShare('edubot_navigation'),
                 'maps',
                 'default.yaml',
             ]),
@@ -34,9 +34,9 @@ def generate_launch_description():
         ),
         'params_file': (
             PathJoinSubstitution([
-                FindPackageShare('omnibot_navigation'),
+                FindPackageShare('edubot_navigation'),
                 'param',
-                'omnibot_nav2.yaml',
+                'edubot_nav2.yaml',
             ]),
             'Full path to Nav2 parameters YAML file'
         ),
@@ -76,12 +76,12 @@ def generate_launch_description():
     )
 
     # -----------------------------
-    # Visualization (from omnibot_viz)
+    # Visualization (from edubot_viz)
     # -----------------------------
     viz_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             PathJoinSubstitution([
-                FindPackageShare('omnibot_viz'),
+                FindPackageShare('edubot_viz'),
                 'launch',
                 'navigation_view.launch.py',
             ])

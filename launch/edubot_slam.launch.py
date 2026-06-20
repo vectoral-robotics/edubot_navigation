@@ -1,8 +1,8 @@
 """
-SLAM bringup for OmniBot using slam_toolbox.
+SLAM bringup for EduBot using slam_toolbox.
 
 Launches:
-  - slam_toolbox (online_sync) with OmniBot-specific parameters
+  - slam_toolbox (online_sync) with EduBot-specific parameters
   - optional RViz2 visualization (navigation view)
 """
 
@@ -16,7 +16,7 @@ from launch_ros.substitutions import FindPackageShare
 
 def generate_launch_description():
     # -------------------------------------------------------------------------
-    # Launch arguments (mirrors omnibot_navigation style)
+    # Launch arguments (mirrors edubot_navigation style)
     # -------------------------------------------------------------------------
     args = {
         'namespace': ('', 'Namespace applied to all SLAM nodes'),
@@ -24,9 +24,9 @@ def generate_launch_description():
         'use_rviz': ('true', 'Start RViz2 navigation view for mapping'),
         'slam_params_file': (
             PathJoinSubstitution([
-                FindPackageShare('omnibot_navigation'),
+                FindPackageShare('edubot_navigation'),
                 'param',
-                'omnibot_slam.yaml',
+                'edubot_slam.yaml',
             ]),
             'Full path to the slam_toolbox parameter YAML file',
         ),
@@ -66,7 +66,7 @@ def generate_launch_description():
     viz_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             PathJoinSubstitution([
-                FindPackageShare('omnibot_viz'),
+                FindPackageShare('edubot_viz'),
                 'launch',
                 'navigation_view.launch.py',
             ])
