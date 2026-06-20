@@ -7,8 +7,11 @@
     files for starting the navigation stack on the EduBot platform.
   </description>
 
-  <maintainer email="dev@siegler.one">Stefan Siegler</maintainer>
+  <maintainer email="info@vectoral.ch">Vectoral</maintainer>
+  <author>Stefan Siegler</author>
   <license>Proprietary</license>
+
+  <url type="repository">https://github.com/vectoral-robotics/edubot_navigation</url>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
 
