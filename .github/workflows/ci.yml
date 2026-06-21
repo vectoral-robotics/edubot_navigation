@@ -49,5 +49,5 @@ jobs:
 
       - name: Check commit messages
         run: >
-          uvx commitizen@4.16.3 check
+          uvx --from commitizen@4.16.3 cz check
           --rev-range ${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}
