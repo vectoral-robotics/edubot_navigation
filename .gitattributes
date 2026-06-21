@@ -1,0 +1,6 @@
+# Normalize line endings: store everything with LF in the repo.
+* text=auto eol=lf
+
+# Map images are binary; map metadata (.yaml) stays text.
+*.pgm   binary
+*.png   binary
