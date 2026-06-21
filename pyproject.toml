@@ -1,0 +1,27 @@
+# EduBot ROS package — Python tooling configuration.
+#
+# This is an ament_cmake package; its only Python is the launch files. There is
+# no Python package to build or test, so the tooling is intentionally lean:
+# ruff (lint + format) and commitizen (versioning/changelog), run via pre-commit
+# and `uvx` — no uv project, no pytest.
+
+[tool.ruff]
+line-length = 99
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF"]
+ignore = ["E501"]
+
+[tool.ruff.format]
+quote-style = "double"
+
+[tool.commitizen]
+name = "cz_conventional_commits"
+version = "0.0.1"
+tag_format = "v$version"
+major_version_zero = true
+update_changelog_on_bump = true
+version_files = [
+    "package.xml:version",
+]
