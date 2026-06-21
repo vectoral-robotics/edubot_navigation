@@ -1,25 +1,46 @@
 # edubot_navigation — Claude guidelines
 
-ROS2 package holding the Nav2 and SLAM launch files and parameter sets for
-EduBot (`launch/`, `param/`, `maps/`). Part of the EduBot ROS2 stack, consumed
-by `edubot_dashboard` via its vcstool manifest.
+Navigation for EduBot: Nav2 and SLAM launch files, parameters and maps.
 
-These guidelines will grow over time. For now the most important rule:
+This is an **ament_cmake** package; its only Python is the launch files. It
+follows the EduBot conventions from the reference repo `edubot_hardware`, with a
+**lean** tooling subset: no Python package, so no pytest/coverage and **no colcon
+build in CI** — just linting, hooks and versioning.
+
+## Language
+
+Everything is written in **English** — code, comments, launch files, READMEs,
+commit messages, config. This holds even when a chat with the maintainer is in
+another language.
+
+## Naming: OmniBot → EduBot
+
+The project was formerly called **OmniBot**; it is now **EduBot**. Always use
+`EduBot`/`edubot`. Fix any `OmniBot`/`omnibot` leftovers.
 
 ## Commits
 
-All commits MUST follow the [Conventional Commits](https://www.conventionalcommits.org) spec.
+All commits MUST follow [Conventional Commits](https://www.conventionalcommits.org),
+enforced by the `commitizen` commit-msg hook. `<type>(<scope>): <summary>` —
+imperative, lower case, no trailing period, summary < ~72 chars.
 
-Format:
+## Metadata
 
-    <type>(<optional scope>): <short summary>
+- Maintainer / contact: **Vectoral**, **info@vectoral.ch** (in `package.xml`).
+- License: **PolyForm Perimeter 1.0.0** — keep `package.xml`, `LICENSE`, README consistent.
 
-Common types: `feat`, `fix`, `docs`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, `revert`.
+## Tooling
 
-- Imperative mood ("add", not "added").
-- Summary under ~72 characters, lower case, no trailing period.
-- Scope is optional and names the affected area.
+No uv project here. Tools run via `uvx` and pre-commit:
 
-Example:
+```bash
+uvx pre-commit install --install-hooks          # git hooks (once per clone)
+uvx pre-commit install --hook-type commit-msg
+uvx ruff@0.12.0 check --fix . && uvx ruff@0.12.0 format .   # before pushing
+```
 
-    feat(nav2): tune controller velocity limits
+- ruff config lives in `pyproject.toml` (`[tool.ruff]`, rules
+  `E,F,W,I,B,UP,SIM,RUF`, line length 99).
+- CI runs ruff (lint + format) and commit-message linting on PRs — nothing else.
+- `commitizen` bumps the version in `package.xml` and generates `CHANGELOG.md`
+  at release time (`uvx commitizen bump`).
