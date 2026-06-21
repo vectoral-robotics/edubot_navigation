@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+
+      # ament_cmake package: no colcon build / pytest in CI. We lint the launch
+      # files; the package is built and run on the robot / in a container.
+      - name: Ruff lint
+        run: uvx ruff@0.12.0 check .
+
+      - name: Ruff format check
+        run: uvx ruff@0.12.0 format --check .
+
+  commitlint:
+    name: Conventional commits
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+
+      - name: Check commit messages
+        run: >
+          uvx commitizen@4.16.3 check
+          --rev-range ${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}
