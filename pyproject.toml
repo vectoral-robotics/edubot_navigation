@@ -18,7 +18,7 @@ quote-style = "double"
 
 [tool.commitizen]
 name = "cz_conventional_commits"
-version = "0.0.1"
+version = "0.0.2"
 tag_format = "v$version"
 major_version_zero = true
 update_changelog_on_bump = true
