@@ -25,13 +25,15 @@ jobs:
         with:
           enable-cache: true
 
-      # ament_cmake package: no colcon build / pytest in CI. We lint the launch
-      # files; the package is built and run on the robot / in a container.
+      # ROS integration runs in a Humble container; pure manager tests need no ROS.
       - name: Ruff lint
         run: uvx ruff@0.12.0 check .
 
       - name: Ruff format check
         run: uvx ruff@0.12.0 format --check .
+
+      - name: Navigation manager tests
+        run: uv run --no-project --with pyyaml python3 -m unittest discover -s tests -v
 
   commitlint:
     name: Conventional commits

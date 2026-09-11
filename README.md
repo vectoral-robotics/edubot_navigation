@@ -52,3 +52,74 @@ Pair with [`edubot_viz`](https://github.com/vectoral-robotics/edubot_viz)
 ## License
 
 PolyForm Perimeter 1.0.0 (source-available) — see [LICENSE](LICENSE).
+
+## Dashboard mapping and persistent navigation
+
+The meta-repo starts `ros2 run edubot_navigation navigation_manager` alongside
+ROS Core. Enable `features.navigation` in the dashboard robot profile and build
+both the ROS and dashboard images from the updated sources (`make dev` in the
+meta-repo). Fleet deployments need a new ROS image **and** dashboard image.
+
+1. Open **Navigation**, choose **New map**, then hold the mapping controls
+   to drive around. Release to stop; lost browser updates expire after 0.4 s.
+2. Enter a unique map name and choose **Save map**. This snapshots the current
+   occupancy map; SLAM continues. Existing maps are never overwritten.
+3. Select the saved map and choose **Use map**. This stops SLAM and
+   starts AMCL + Nav2 with the saved map. The selection survives restarts.
+4. Choose **Set position** and drag on the map to specify the actual robot position and
+   heading. Once localization, sensors and Nav2 are ready, choose **Set destination** and
+   drag to send a destination and final heading. **Stop robot** cancels the real
+   NavigateToPose action and immediately closes the navigation motor gate.
+5. **End session** stops SLAM/Nav2 without deleting the selected map. **Open
+   active map** resumes it; the same map also loads automatically on reboot.
+   Loading a map never automatically starts a goal. Set the initial pose again
+   after reboot or map activation; no previous physical position is assumed.
+
+The manager stores maps as `maps/<name>/map.yaml` + `map.pgm`, and the active
+selection as `active-map.json`, under `/state/edubot/navigation`. This is the
+existing persistent `edubot_state` Docker volume. A map is activated locally on
+the robot; no second file upload is needed. `EDUBOT_NAVIGATION_STATE` can change
+the manager directory; if changed, also set `DASHBOARD_NAVIGATION_SOCKET` to its
+`control.sock` path in the dashboard container. Both containers must see the
+same directory. The control socket has no TCP listener.
+
+`session.log` contains the latest SLAM/Nav2 launch output. The API reports a
+process failure rather than silently falling back to another map. Saving uses
+a staging directory and publishes only complete map pairs. A lifetime lock
+prevents a second manager from starting competing navigation processes.
+
+### Motion and sensor configuration
+
+`dashboard_navigation.launch.py` uses `param/edubot_differential.yaml` and routes
+all controller and recovery motion through `/navigation/cmd_vel`. The manager
+forwards only longitudinal velocity and yaw to `/cmd_vel`, with limits of
+0.20 m/s forward, 0.15 m/s reverse and 0.8 rad/s. Manual mapping uses at most
+0.15 m/s and 0.6 rad/s. The original omni configuration remains available through
+the standalone navigation launch.
+
+The existing hardware kinematics remain Mecanum. A current `/scan`, `/odom` and
+TF chain `map -> odom -> base_link -> laser` are required. The manager stops
+navigation output on sensor/localization/controller timeout. Nav2 handles
+obstacle avoidance while navigating; mapping controls are manual teleoperation.
+Use only one command source at a time: other existing teleop/Blockly/Vibe tools
+still publish directly to `/cmd_vel` and are not arbitrated by this manager.
+
+Verify the configured 0.35 m square footprint, LiDAR mounting transform, encoder
+scale and IMU/EKF alignment on the actual robot before the first navigation run.
+The dashboard is fixed to the map frame once a map arrives, including the laser
+mount transform. The hardware simulator uses wall time; `use_sim_time` stays
+false unless a separate simulator supplies `/clock`.
+
+### Validation
+
+```bash
+python3 -m unittest discover -s tests -v
+uvx ruff@0.12.0 check .
+uvx ruff@0.12.0 format --check .
+```
+
+After building the package in a **hardware-free, isolated ROS 2 Humble
+environment**, `python3 tests/integration_ros.py` publishes synthetic room scans
+and odometry, creates/saves/activates a map, sends and cancels a real Nav2 goal,
+checks zero lateral output, and restarts the manager to verify map persistence.
+It does not model wheel dynamics or replace a real-robot navigation test.

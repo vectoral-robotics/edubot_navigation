@@ -8,4 +8,9 @@ install(
   DESTINATION share/${PROJECT_NAME}
 )
 
+install(PROGRAMS scripts/navigation_manager.py
+  DESTINATION lib/${PROJECT_NAME}
+  RENAME navigation_manager
+)
+
 ament_package()
